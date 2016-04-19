@@ -17,15 +17,15 @@ func makeKey(key: String) -> String {
 }
 
 extension Request {
-    var session: Session? {
+    public var session: Session? {
         get {
             guard let session = storage[makeKey("session")] else {
                 return nil
             }
-        
+
             return session as? Session
         }
-        
+
         set {
             storage[makeKey("session")] = newValue
         }
@@ -43,13 +43,13 @@ public struct SessionMiddleware: MiddlewareType {
         var req = req
         var res = res
         req.storage[makeKey("session")] = session
-        
+
         var err: ErrorProtocol? = nil
-        
+
         let onThread = {
             // Parse signedCookies
             req.storage["signedCookies"] = signedCookies(req.cookies, secret: self.session.secret)
-            
+
             if self.shouldSetCookie(req) {
                 do {
                     let cookie = try self.initCookieForSet()
@@ -62,48 +62,48 @@ public struct SessionMiddleware: MiddlewareType {
                 }
             }
         }
-        
+
         let onFinish = {
             if let e = err {
                 next(.Error(e))
                 return
             }
-            
+
             if !res.cookies.isEmpty {
                 next(.Chain(req, res))
                 return
             }
-            
+
             guard let sessionId = (req.storage["signedCookies"] as? [String: String])?[self.session.keyName] else {
                 next(.Chain(req, res))
                 return
             }
-            
+
             req.session?.id = sessionId
-            
+
             req.session?.load() {
                 req.session?.values = [:]
-                
+
                 if case .Error(let error) = $0 {
                     return next(.Error(error))
                 }
-                
+
                 if case .Data(let sesValue) = $0 {
                     req.session?.values = sesValue
                 }
                 next(.Chain(req, res))
             }
         }
-        
+
         Process.qwork(onThread: onThread, onFinish: onFinish)
     }
-    
-    
+
+
     private func shouldSetCookie(req: Request) -> Bool {
         guard let cookieValue = req.cookies[session.keyName] else {
             return true
         }
-        
+
         do {
             let decoded = try String(percentEncoded: cookieValue)
             let dec = try signedCookie(decoded, secret: session.secret)
@@ -113,7 +113,7 @@ public struct SessionMiddleware: MiddlewareType {
             return true
         }
     }
-    
+
     private func initCookieForSet() throws -> AttributedCookie {
         let sessionId = try signSync(Session.generateId().hexadecimalString(), secret: session.secret)
         return AttributedCookie(name: session.keyName, value: sessionId, expires: session.expires?.rfc822, maxAge: session.maxAge, domain: session.domain, path: session.path, secure: session.secure, HTTPOnly: session.HTTPOnly)
