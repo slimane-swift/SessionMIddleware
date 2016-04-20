@@ -10,4 +10,3 @@ public protocol SerializerType {
     func serialize(src: [String: AnyObject]) throws -> String
     func deserialize(src: String) throws -> [String: AnyObject]
 }
-
