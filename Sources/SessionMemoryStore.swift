@@ -10,6 +10,8 @@ private var sessionMap = [String: [String: AnyObject]]()
 
 public struct SessionMemoryStore: SessionStoreType {
 
+    public init(){}
+
     public func load(sessionId: String, completion: (SessionResult<[String: AnyObject]>) -> Void) {
         guard let sesValues = sessionMap[sessionId] else {
             return completion(.Data([:]))
