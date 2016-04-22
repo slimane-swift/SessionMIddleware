@@ -52,7 +52,7 @@ func signedCookie(val: String, secret: String) throws -> String? {
 func signSync(val: String, secret: String) throws -> String {
     let encrypted = try Crypto.Hasher(.SHA256).hashSync(secret)
 
-    let buf = Buffer(encrypted.bytes)
+    let buf = Buffer(bytes: encrypted.bytes)
 
     return "s:\(val).\(buf.toString(.Base64)!)"
 }
