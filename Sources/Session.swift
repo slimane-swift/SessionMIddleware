@@ -114,7 +114,7 @@ public struct Session {
         }
     }
 
-    public func load(completion: (SessionResult<[String: AnyObject]>) -> Void){
+    public func load(_ completion: (SessionResult<[String: AnyObject]>) -> Void){
         if let id = self.id {
             self.conf.store.load(id, completion: completion)
         } else {
@@ -128,7 +128,7 @@ public struct Session {
         }
     }
 
-    public static func generateId(size: UInt = 12) throws -> Data {
+    public static func generateId(_ size: UInt = 12) throws -> Data {
         return try Crypto.randomBytesSync(size)
     }
 }

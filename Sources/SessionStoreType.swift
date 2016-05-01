@@ -12,7 +12,7 @@ public enum SessionResult<T> {
 }
 
 public protocol SessionStoreType {
-    func destroy(sessionId: String)
-    func load(sessionId: String, completion: (SessionResult<[String: AnyObject]>) -> Void)
-    func store(sessionId: String, values: [String: AnyObject], expires: Int?, completion: () -> Void)
+    func destroy(_ sessionId: String)
+    func load(_ sessionId: String, completion: (SessionResult<[String: AnyObject]>) -> Void)
+    func store(_ sessionId: String, values: [String: AnyObject], expires: Int?, completion: () -> Void)
 }

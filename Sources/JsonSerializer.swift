@@ -12,7 +12,7 @@ import Foundation
 public struct JsonSerializer: SerializerType {
     public init(){}
 
-    public func serialize(src: [String: AnyObject]) throws -> String {
+    public func serialize(_ src: [String: AnyObject]) throws -> String {
 #if os(Linux)
         let jsonData = try NSJSONSerialization.dataWithJSONObject(src as! AnyObject, options: NSJSONWritingOptions(rawValue: 0))
 #else
@@ -24,11 +24,11 @@ public struct JsonSerializer: SerializerType {
         return jsonStr
     }
 
-    public func deserialize(src: String) throws -> [String: AnyObject] {
+    public func deserialize(_ src: String) throws -> [String: AnyObject] {
 #if os(Linux)
         let _data = src.dataUsingEncoding(NSUTF8StringEncoding)
 #else
-        let _data = src.data(usingEncoding: NSUTF8StringEncoding)
+        let _data = src.data(using: NSUTF8StringEncoding)
 #endif
 
         guard let data = _data else {

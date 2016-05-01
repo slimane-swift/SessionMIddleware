@@ -12,7 +12,7 @@
 @_exported import JSON
 @_exported import Suv
 
-func makeKey(key: String) -> String {
+func makeKey(_ key: String) -> String {
     return "Slimane.SessionMiddleware.\(key)"
 }
 
@@ -39,7 +39,7 @@ public struct SessionMiddleware: MiddlewareType {
         session = Session(conf: conf)
     }
 
-    public func respond(req: Request, res: Response, next: MiddlewareChain) {
+    public func respond(_ req: Request, res: Response, next: MiddlewareChain) {
         var req = req
         var res = res
         req.storage[makeKey("session")] = session
@@ -99,7 +99,7 @@ public struct SessionMiddleware: MiddlewareType {
     }
 
 
-    private func shouldSetCookie(req: Request) -> Bool {
+    private func shouldSetCookie(_ req: Request) -> Bool {
         guard let cookieValue = req.cookies[session.keyName] else {
             return true
         }

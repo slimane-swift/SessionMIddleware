@@ -7,6 +7,6 @@
 //
 
 public protocol SerializerType {
-    func serialize(src: [String: AnyObject]) throws -> String
-    func deserialize(src: String) throws -> [String: AnyObject]
+    func serialize(_ src: [String: AnyObject]) throws -> String
+    func deserialize(_ src: String) throws -> [String: AnyObject]
 }

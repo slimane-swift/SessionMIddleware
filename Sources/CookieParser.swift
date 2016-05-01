@@ -7,17 +7,17 @@
 //
 #if os(Linux)
 extension String {
-    func substring(from from: Index) -> String {
-        return self.substringFromIndex(from)
+    func substring(from fromIndex: Index) -> String {
+        return self.substringFromIndex(fromIndex)
     }
 
-    func substring(to to: Index) -> String {
-        return self.substringToIndex(to)
+    func substring(to toIndex: Index) -> String {
+        return self.substringToIndex(toIndex)
     }
 }
 #endif
 
-func signedCookies(cookies: Set<Cookie>, secret: String) -> [String: String] {
+func signedCookies(_ cookies: Set<Cookie>, secret: String) -> [String: String] {
     var signedCookies = [String: String]()
 
     cookies.forEach {
@@ -31,7 +31,7 @@ func signedCookies(cookies: Set<Cookie>, secret: String) -> [String: String] {
     return signedCookies
 }
 
-func decode(val: String) throws -> String {
+func decode(_ val: String) throws -> String {
     let str = val.substring(from: val.startIndex.advanced(by: 2))
     let searchCharacter: Character = "."
     guard let index = str.lowercased().characters.index(of: searchCharacter) else {
@@ -40,7 +40,7 @@ func decode(val: String) throws -> String {
     return str.substring(to: index)
 }
 
-func signedCookie(val: String, secret: String) throws -> String? {
+func signedCookie(_ val: String, secret: String) throws -> String? {
     let signedPrefix = val.substring(to: val.startIndex.advanced(by: 2))
     if signedPrefix != "s:" {
         return nil
@@ -49,7 +49,7 @@ func signedCookie(val: String, secret: String) throws -> String? {
     return try unsignSync(val, secret: secret)
 }
 
-func signSync(val: String, secret: String) throws -> String {
+func signSync(_ val: String, secret: String) throws -> String {
     let encrypted = try Crypto.Hasher(.SHA256).hashSync(secret)
 
     let buf = Buffer(bytes: encrypted.bytes)
@@ -57,7 +57,7 @@ func signSync(val: String, secret: String) throws -> String {
     return "s:\(val).\(buf.toString(.Base64)!)"
 }
 
-func unsignSync(val: String, secret: String) throws -> String {
+func unsignSync(_ val: String, secret: String) throws -> String {
     let str = try decode(val)
 
     let sha1 = Crypto.Hasher(.SHA1)

@@ -12,19 +12,19 @@ public struct SessionMemoryStore: SessionStoreType {
 
     public init(){}
 
-    public func load(sessionId: String, completion: (SessionResult<[String: AnyObject]>) -> Void) {
+    public func load(_ sessionId: String, completion: (SessionResult<[String: AnyObject]>) -> Void) {
         guard let sesValues = sessionMap[sessionId] else {
             return completion(.Data([:]))
         }
         completion(.Data(sesValues))
     }
 
-    public func store(key: String, values: [String: AnyObject], expires: Int?, completion: () -> Void) {
+    public func store(_ key: String, values: [String: AnyObject], expires: Int?, completion: () -> Void) {
         sessionMap[key] = values
         completion()
     }
 
-    public func destroy(sessionId: String) {
+    public func destroy(_ sessionId: String) {
         sessionMap[sessionId] = nil
     }
 }
