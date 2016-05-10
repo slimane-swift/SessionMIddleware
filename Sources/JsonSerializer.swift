@@ -16,7 +16,7 @@ public struct JsonSerializer: SerializerType {
 #if os(Linux)
         let jsonData = try NSJSONSerialization.dataWithJSONObject(src as! AnyObject, options: NSJSONWritingOptions(rawValue: 0))
 #else
-        let jsonData = try NSJSONSerialization.data(withJSONObject: src, options: NSJSONWritingOptions(rawValue: 0))
+        let jsonData = try NSJSONSerialization.data(withJSONObject: src as AnyObject, options: NSJSONWritingOptions(rawValue: 0))
 #endif
 
         let jsonStr = String(NSString(data: jsonData, encoding: NSUTF8StringEncoding)!)
