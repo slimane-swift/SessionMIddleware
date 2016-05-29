@@ -47,7 +47,7 @@ public struct Session {
     var values = [String: AnyObject]() {
         didSet {
             if let id = self.id {
-                // Need to emit storing error
+                // Need to emit string error
                 self.conf.store.store(id, values: values, expires: ttl) { _ in }
             }
         }
@@ -100,20 +100,6 @@ public struct Session {
         return self.conf.keyName.hashValue
     }
 
-    public subscript(key: String) -> AnyObject? {
-        get {
-            guard let value = self.values[key] else {
-                return nil
-            }
-
-            return value
-        }
-
-        set {
-            self.values[key] = newValue
-        }
-    }
-
     public func load(_ completion: (SessionResult<[String: AnyObject]>) -> Void){
         if let id = self.id {
             self.conf.store.load(id, completion: completion)
@@ -130,5 +116,40 @@ public struct Session {
 
     public static func generateId(_ size: UInt = 12) throws -> Data {
         return try Crypto.randomBytesSync(size)
+    }
+}
+
+extension Session: Sequence {
+    
+    #if swift(>=3.0)
+    public func makeIterator() -> DictionaryIterator<String, AnyObject> {
+        return values.makeIterator()
+    }
+    #else
+    public func generate() -> DictionaryGenerator<String, AnyObject> {
+        return values.generate()
+    }
+    #endif
+    
+    public var count: Int {
+        return values.count
+    }
+    
+    public var isEmpty: Bool {
+        return values.isEmpty
+    }
+    
+    public subscript(key: String) -> AnyObject? {
+        get {
+            guard let value = self.values[key] else {
+                return nil
+            }
+            
+            return value
+        }
+        
+        set {
+            self.values[key] = newValue
+        }
     }
 }
