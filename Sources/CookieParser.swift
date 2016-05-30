@@ -5,17 +5,6 @@
 //  Created by Yuki Takei on 4/18/16.
 //
 //
-#if os(Linux)
-extension String {
-    func substring(from fromIndex: Index) -> String {
-        return self.substringFromIndex(fromIndex)
-    }
-
-    func substring(to toIndex: Index) -> String {
-        return self.substringToIndex(toIndex)
-    }
-}
-#endif
 
 func signedCookies(_ cookies: Set<Cookie>, secret: String) -> [String: String] {
     var signedCookies = [String: String]()
