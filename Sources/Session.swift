@@ -44,7 +44,7 @@ public struct Session {
 
     public internal(set) var id: String? = nil
 
-    var values = [String: AnyObject]() {
+    var values = [String: String]() {
         didSet {
             if let id = self.id {
                 // Need to emit string error
@@ -100,7 +100,7 @@ public struct Session {
         return self.conf.keyName.hashValue
     }
 
-    public func load(_ completion: (SessionResult<[String: AnyObject]>) -> Void){
+    public func load(_ completion: (SessionResult<[String: String]>) -> Void){
         if let id = self.id {
             self.conf.store.load(id, completion: completion)
         } else {
@@ -122,11 +122,11 @@ public struct Session {
 extension Session: Sequence {
     
     #if swift(>=3.0)
-    public func makeIterator() -> DictionaryIterator<String, AnyObject> {
+    public func makeIterator() -> DictionaryIterator<String, String> {
         return values.makeIterator()
     }
     #else
-    public func generate() -> DictionaryGenerator<String, AnyObject> {
+    public func generate() -> DictionaryGenerator<String, String> {
         return values.generate()
     }
     #endif
@@ -139,7 +139,7 @@ extension Session: Sequence {
         return values.isEmpty
     }
     
-    public subscript(key: String) -> AnyObject? {
+    public subscript(key: String) -> String? {
         get {
             guard let value = self.values[key] else {
                 return nil
