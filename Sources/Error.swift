@@ -7,17 +7,17 @@
 //
 
 internal enum Error: ErrorProtocol, CustomStringConvertible {
-    case SerializerFailure(String)
-    case CookieParserFailure(String)
-    case NoSessionID
+    case serializerFailure(String)
+    case cookieParserFailure(String)
+    case noSessionID
     
     var description: String {
         switch(self) {
-        case .SerializerFailure(let message):
+        case .serializerFailure(let message):
             return message
-        case .CookieParserFailure(let message):
+        case .cookieParserFailure(let message):
             return message
-        case .NoSessionID:
+        case .noSessionID:
             return "No session id"
         }
     }

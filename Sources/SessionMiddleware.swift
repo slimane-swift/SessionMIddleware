@@ -6,10 +6,9 @@
 //  Copyright © 2016 MikeTOKYO. All rights reserved.
 //
 
-@_exported import Middleware
+@_exported import HTTP
 @_exported import Time
 @_exported import Crypto
-@_exported import JSON
 @_exported import Suv
 
 func makeKey(_ key: String) -> String {
@@ -32,31 +31,31 @@ extension Request {
     }
 }
 
-public struct SessionMiddleware: MiddlewareType {
+public struct SessionMiddleware: AsyncMiddleware {
     var session: Session
 
     public init(conf: SessionConfig){
         session = Session(conf: conf)
     }
 
-    public func respond(_ req: Request, res: Response, next: MiddlewareChain) {
-        var req = req
-        var res = res
+    public func respond(to request: Request, chainingTo next: AsyncResponder, result: ((Void) throws -> Response) -> Void) {
+        var req = request
         req.storage[makeKey("session")] = session
 
         var err: ErrorProtocol? = nil
+        var setCookie: S4.Cookies? = nil
 
         let onThread = {
             // Parse signedCookies
-            req.storage["signedCookies"] = signedCookies(req.cookies, secret: self.session.secret)
+            if let cookieString = req.headers["cookie"], cookies = HTTP.Cookie.parse(string: cookieString) {
+                req.storage["signedCookies"] = signedCookies(cookies, secret: self.session.secret)
+            }
 
             if self.shouldSetCookie(req) {
                 do {
                     let cookie = try self.initCookieForSet()
-                    // Set-Cookie
-                    res.cookies = Set([cookie])
-                    // set sessionID
-                    req.session?.id = signedCookies(Set([Cookie(name: cookie.name, value: cookie.value)]), secret: self.session.secret)[self.session.keyName]
+                    setCookie = S4.Cookies(cookies: [cookie])
+                    req.session?.id = signedCookies(Set([HTTP.Cookie(name: cookie.name, value: cookie.value)]), secret: self.session.secret)[self.session.keyName]
                 } catch {
                     err = error
                 }
@@ -65,17 +64,25 @@ public struct SessionMiddleware: MiddlewareType {
 
         let onFinish = {
             if let e = err {
-                next(.Error(e))
+                result {
+                    throw e
+                }
                 return
             }
-
-            if !res.cookies.isEmpty {
-                next(.Chain(req, res))
+            
+            if let cookie = setCookie {
+                next.respond(to: req) { getResponse in
+                    result {
+                        var response = try getResponse()
+                        response.cookies = cookie // should merge
+                        return response
+                    }
+                }
                 return
             }
 
             guard let sessionId = (req.storage["signedCookies"] as? [String: String])?[self.session.keyName] else {
-                next(.Chain(req, res))
+                next.respond(to: req, result: result)
                 return
             }
 
@@ -84,14 +91,15 @@ public struct SessionMiddleware: MiddlewareType {
             req.session?.load() {
                 req.session?.values = [:]
 
-                if case .Error(let error) = $0 {
-                    return next(.Error(error))
+                if case .error(let error) = $0 {
+                    result {
+                        throw error
+                    }
                 }
-
-                if case .Data(let sesValue) = $0 {
+                else if case .data(let sesValue) = $0 {
                     req.session?.values = sesValue
                 }
-                next(.Chain(req, res))
+                next.respond(to: req, result: result)
             }
         }
 
@@ -114,8 +122,8 @@ public struct SessionMiddleware: MiddlewareType {
         }
     }
 
-    private func initCookieForSet() throws -> AttributedCookie {
+    private func initCookieForSet() throws -> S4.Cookie {
         let sessionId = try signSync(Session.generateId().hexadecimalString(), secret: session.secret)
-        return AttributedCookie(name: session.keyName, value: sessionId, expires: session.expires?.rfc822, maxAge: session.maxAge, domain: session.domain, path: session.path, secure: session.secure, HTTPOnly: session.HTTPOnly)
+        return S4.Cookie(name: session.keyName, value: sessionId, expires: session.expires?.rfc822, maxAge: session.maxAge, domain: session.domain, path: session.path, secure: session.secure, HTTPOnly: session.HTTPOnly)
     }
 }

@@ -7,8 +7,8 @@
 //
 
 public enum SessionResult<T> {
-    case Data(T)
-    case Error(ErrorProtocol)
+    case data(T)
+    case error(ErrorProtocol)
 }
 
 public protocol SessionStoreType {

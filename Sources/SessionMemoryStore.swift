@@ -14,9 +14,9 @@ public struct SessionMemoryStore: SessionStoreType {
 
     public func load(_ sessionId: String, completion: (SessionResult<[String: String]>) -> Void) {
         guard let sesValues = sessionMap[sessionId] else {
-            return completion(.Data([:]))
+            return completion(.data([:]))
         }
-        completion(.Data(sesValues))
+        completion(.data(sesValues))
     }
 
     public func store(_ key: String, values: [String: String], expires: Int?, completion: () -> Void) {

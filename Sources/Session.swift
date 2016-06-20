@@ -104,7 +104,7 @@ public struct Session {
         if let id = self.id {
             self.conf.store.load(id, completion: completion)
         } else {
-            completion(.Error(Error.NoSessionID))
+            completion(.error(Error.noSessionID))
         }
     }
 
