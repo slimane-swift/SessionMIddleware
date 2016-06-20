@@ -108,14 +108,13 @@ public struct SessionMiddleware: AsyncMiddleware {
 
 
     private func shouldSetCookie(_ req: Request) -> Bool {
-        guard let cookieValue = req.cookies[session.keyName] else {
+        guard let cookieValue = req.cookies.filter({ (k,_) in k.trim() == session.keyName }).map({ (_,v) in v}).first else {
             return true
         }
 
         do {
-            let decoded = try String(percentEncoded: cookieValue)
-            let dec = try signedCookie(decoded, secret: session.secret)
-            let sesId = try decode(decoded)
+            let dec = try signedCookie(cookieValue, secret: session.secret)
+            let sesId = try decode(cookieValue)
             return dec != sesId
         } catch {
             return true
