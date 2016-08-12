@@ -12,14 +12,14 @@ public struct SessionMemoryStore: SessionStoreType {
 
     public init(){}
 
-    public func load(_ sessionId: String, completion: (SessionResult<[String: String]>) -> Void) {
+    public func load(_ sessionId: String, completion: @escaping ((Void) throws -> [String: String]) -> Void) {
         guard let sesValues = sessionMap[sessionId] else {
-            return completion(.data([:]))
+            return completion { [:] }
         }
-        completion(.data(sesValues))
+        completion { sesValues }
     }
 
-    public func store(_ key: String, values: [String: String], expires: Int?, completion: () -> Void) {
+    public func store(_ key: String, values: [String: String], expiration: Int?, completion: @escaping () -> Void) {
         sessionMap[key] = values
         completion()
     }

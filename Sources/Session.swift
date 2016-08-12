@@ -13,9 +13,9 @@ public struct SessionConfig {
 
     public let secret: String
 
-    public let expires: Int?
+    public let expiration: Int?
 
-    public let HTTPOnly: Bool
+    public let httpOnly: Bool
 
     public let secure: Bool
 
@@ -25,12 +25,12 @@ public struct SessionConfig {
 
     public let path: String?
 
-    public init(keyName: String = "slimane_sesid", secret: String, expires: Int? = nil, HTTPOnly: Bool = false, maxAge: Int? = nil, domain: String? = nil, path: String? = nil, secure: Bool = false, store: SessionStoreType = SessionMemoryStore()){
+    public init(keyName: String = "slimane_sesid", secret: String, expiration: Int? = nil, httpOnly: Bool = false, maxAge: Int? = nil, domain: String? = nil, path: String? = "/", secure: Bool = false, store: SessionStoreType = SessionMemoryStore()){
         self.keyName = keyName
         self.secret = secret
         self.store = store
-        self.expires = expires
-        self.HTTPOnly = HTTPOnly
+        self.expiration = expiration
+        self.httpOnly = httpOnly
         self.secure = secure
         self.maxAge = maxAge
         self.domain = domain
@@ -40,7 +40,7 @@ public struct SessionConfig {
 
 public struct Session {
 
-    private var conf: SessionConfig
+    private var config: SessionConfig
 
     public internal(set) var id: String? = nil
 
@@ -48,44 +48,44 @@ public struct Session {
         didSet {
             if let id = self.id {
                 // Need to emit string error
-                self.conf.store.store(id, values: values, expires: ttl) { _ in }
+                self.config.store.store(id, values: values, expiration: ttl) { _ in }
             }
         }
     }
 
-    init(conf: SessionConfig){
-        self.conf = conf
+    init(config: SessionConfig){
+        self.config = config
     }
 
     public var keyName: String {
-        return self.conf.keyName
+        return self.config.keyName
     }
 
     public var secret: String {
-        return self.conf.secret
+        return self.config.secret
     }
 
-    public var HTTPOnly: Bool {
-        return self.conf.HTTPOnly
+    public var httpOnly: Bool {
+        return self.config.httpOnly
     }
 
     public var secure: Bool {
-        return self.conf.secure
+        return self.config.secure
     }
 
     public var maxAge: Int? {
-        return self.conf.maxAge
+        return self.config.maxAge
     }
 
     public var domain: String? {
-        return self.conf.domain
+        return self.config.domain
     }
 
     public var path: String? {
-        return self.conf.path
+        return self.config.path
     }
 
-    public var expires: Time? {
+    public var expiration: Time? {
         if let ttl = self.ttl {
             return Time(tz: .Local).addSec(ttl)
         }
@@ -93,24 +93,26 @@ public struct Session {
     }
 
     public var ttl: Int? {
-        return self.conf.expires
+        return self.config.expiration
     }
 
     public var hashValue: Int {
-        return self.conf.keyName.hashValue
+        return self.config.keyName.hashValue
     }
 
-    public func load(_ completion: (SessionResult<[String: String]>) -> Void){
+    public func load(_ completion: @escaping ((Void) throws -> [String: String]) -> Void){
         if let id = self.id {
-            self.conf.store.load(id, completion: completion)
+            self.config.store.load(id, completion: completion)
         } else {
-            completion(.error(Error.noSessionID))
+            completion {
+                throw SessionError.noSessionID
+            }
         }
     }
 
     public func destroy(){
         if let id = self.id {
-            self.conf.store.destroy(id)
+            self.config.store.destroy(id)
         }
     }
 
@@ -121,15 +123,9 @@ public struct Session {
 
 extension Session: Sequence {
     
-    #if swift(>=3.0)
     public func makeIterator() -> DictionaryIterator<String, String> {
         return values.makeIterator()
     }
-    #else
-    public func generate() -> DictionaryGenerator<String, String> {
-        return values.generate()
-    }
-    #endif
     
     public var count: Int {
         return values.count

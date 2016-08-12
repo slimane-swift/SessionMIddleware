@@ -34,28 +34,28 @@ extension Request {
 public struct SessionMiddleware: AsyncMiddleware {
     var session: Session
 
-    public init(conf: SessionConfig){
-        session = Session(conf: conf)
+    public init(config: SessionConfig){
+        session = Session(config: config)
     }
 
-    public func respond(to request: Request, chainingTo next: AsyncResponder, result: ((Void) throws -> Response) -> Void) {
+    public func respond(to request: Request, chainingTo next: AsyncResponder, result: @escaping ((Void) throws -> Response) -> Void) {
         var req = request
         req.storage[makeKey("session")] = session
 
-        var err: ErrorProtocol? = nil
-        var setCookie: S4.Cookies? = nil
+        var err: Error? = nil
+        var setCookie: Set<AttributedCookie>? = nil
 
         let onThread = {
             // Parse signedCookies
-            if let cookieString = req.headers["cookie"], cookies = HTTP.Cookie.parse(string: cookieString) {
+            if let cookieString = req.headers["cookie"], let cookies = Set<Cookie>(cookieHeader: cookieString) {
                 req.storage["signedCookies"] = signedCookies(cookies, secret: self.session.secret)
             }
 
             if self.shouldSetCookie(req) {
                 do {
-                    let cookie = try self.initCookieForSet()
-                    setCookie = S4.Cookies(cookies: [cookie])
-                    req.session?.id = signedCookies(Set([HTTP.Cookie(name: cookie.name, value: cookie.value)]), secret: self.session.secret)[self.session.keyName]
+                    let cookie = try self.createCookieForSet()
+                    setCookie = Set<AttributedCookie>([cookie])
+                    req.session?.id = signedCookies(Set([Cookie(name: cookie.name, value: cookie.value)]), secret: self.session.secret)[self.session.keyName]
                 } catch {
                     err = error
                 }
@@ -88,17 +88,18 @@ public struct SessionMiddleware: AsyncMiddleware {
 
             req.session?.id = sessionId
 
-            req.session?.load() {
+            req.session?.load() { getData in
                 req.session?.values = [:]
-
-                if case .error(let error) = $0 {
-                    result {
+                
+                do {
+                    let data = try getData()
+                    req.session?.values = data
+                } catch {
+                    return result {
                         throw error
                     }
                 }
-                else if case .data(let sesValue) = $0 {
-                    req.session?.values = sesValue
-                }
+                
                 next.respond(to: req, result: result)
             }
         }
@@ -106,9 +107,8 @@ public struct SessionMiddleware: AsyncMiddleware {
         Process.qwork(onThread: onThread, onFinish: onFinish)
     }
 
-
     private func shouldSetCookie(_ req: Request) -> Bool {
-        guard let cookieValue = req.cookies.filter({ (k,_) in k.trim() == session.keyName }).map({ (_,v) in v}).first else {
+        guard let cookieValue = req.cookies.filter({ $0.name.trim() == session.keyName }).map({ $0.value }).first else {
             return true
         }
 
@@ -121,8 +121,16 @@ public struct SessionMiddleware: AsyncMiddleware {
         }
     }
 
-    private func initCookieForSet() throws -> S4.Cookie {
+    private func createCookieForSet() throws -> AttributedCookie {
         let sessionId = try signSync(Session.generateId().hexadecimalString(), secret: session.secret)
-        return S4.Cookie(name: session.keyName, value: sessionId, expires: session.expires?.rfc822, maxAge: session.maxAge, domain: session.domain, path: session.path, secure: session.secure, HTTPOnly: session.HTTPOnly)
+        
+        var maxAge: AttributedCookie.Expiration?
+        if let ttl = session.ttl {
+            maxAge = .maxAge(ttl)
+        } else {
+            maxAge = nil
+        }
+        
+        return AttributedCookie(name: session.keyName, value: sessionId, expiration: maxAge , domain: session.domain, path: session.path, secure: session.secure, httpOnly: session.httpOnly)
     }
 }

@@ -24,7 +24,7 @@ func decode(_ val: String) throws -> String {
     let str = val.substring(from: val.index(val.startIndex, offsetBy: 2))
     let searchCharacter: Character = "."
     guard let index = str.lowercased().characters.index(of: searchCharacter) else {
-        throw Error.cookieParserFailure("Invalid cookie value")
+        throw SessionError.cookieParserFailure
     }
     return str.substring(to: index)
 }
@@ -54,7 +54,7 @@ func unsignSync(_ val: String, secret: String) throws -> String {
     let sha1val = try sha1.hashSync(val)
 
     if sha1mac.bytes != sha1val.bytes {
-        throw Error.cookieParserFailure("Invalid session value")
+        throw SessionError.cookieParserFailure
     }
 
     return str

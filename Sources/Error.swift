@@ -6,19 +6,8 @@
 //  Copyright © 2016 MikeTOKYO. All rights reserved.
 //
 
-internal enum Error: ErrorProtocol, CustomStringConvertible {
-    case serializerFailure(String)
-    case cookieParserFailure(String)
+internal enum SessionError: Error {
+    case serializerFailure
+    case cookieParserFailure
     case noSessionID
-    
-    var description: String {
-        switch(self) {
-        case .serializerFailure(let message):
-            return message
-        case .cookieParserFailure(let message):
-            return message
-        case .noSessionID:
-            return "No session id"
-        }
-    }
 }
