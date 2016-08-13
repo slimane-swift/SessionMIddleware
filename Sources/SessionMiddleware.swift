@@ -47,9 +47,7 @@ public struct SessionMiddleware: AsyncMiddleware {
 
         let onThread = {
             // Parse signedCookies
-            if let cookieString = req.headers["cookie"], let cookies = Set<Cookie>(cookieHeader: cookieString) {
-                req.storage["signedCookies"] = signedCookies(cookies, secret: self.session.secret)
-            }
+            req.storage["signedCookies"] = signedCookies(req.cookies, secret: self.session.secret)
 
             if self.shouldSetCookie(req) {
                 do {
@@ -81,7 +79,7 @@ public struct SessionMiddleware: AsyncMiddleware {
                 return
             }
 
-            guard let sessionId = (req.storage["signedCookies"] as? [String: String])?[self.session.keyName] else {
+            guard let sessionId = (req.storage["signedCookies"] as? [String: String])?[self.session.keyName] , !sessionId.isEmpty else {
                 next.respond(to: req, result: result)
                 return
             }
@@ -115,6 +113,7 @@ public struct SessionMiddleware: AsyncMiddleware {
         do {
             let dec = try signedCookie(cookieValue, secret: session.secret)
             let sesId = try decode(cookieValue)
+            
             return dec != sesId
         } catch {
             return true

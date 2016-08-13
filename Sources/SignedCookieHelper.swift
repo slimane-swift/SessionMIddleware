@@ -48,7 +48,7 @@ func unsignSync(_ val: String, secret: String) throws -> String {
     let str = try decode(val)
 
     let sha1 = Crypto.Hasher(.sha1)
-    let mac = try signSync(str, secret: secret)
+    let mac = try signSync(str, secret: secret).trim(["="])
 
     let sha1mac = try sha1.hashSync(mac)
     let sha1val = try sha1.hashSync(val)
