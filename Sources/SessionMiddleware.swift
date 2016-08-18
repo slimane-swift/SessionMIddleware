@@ -42,44 +42,40 @@ public struct SessionMiddleware: AsyncMiddleware {
         var req = request
         req.storage[makeKey("session")] = session
 
-        var err: Error? = nil
-        var setCookie: Set<AttributedCookie>? = nil
-
-        let onThread = {
+        let onThread: (QueueWorkContext) -> Void = { ctx in
             // Parse signedCookies
-            req.storage["signedCookies"] = signedCookies(req.cookies, secret: self.session.secret)
-
-            if self.shouldSetCookie(req) {
+            ctx.storage["signedCookies"] = signedCookies(req.cookies, secret: self.session.secret)
+            if shouldSetCookie(req, self.session) {
                 do {
-                    let cookie = try self.createCookieForSet()
-                    setCookie = Set<AttributedCookie>([cookie])
-                    req.session?.id = signedCookies(Set([Cookie(name: cookie.name, value: cookie.value)]), secret: self.session.secret)[self.session.keyName]
+                    let cookie = try createCookieForSet(self.session)
+                    let setCookie = Set<AttributedCookie>([cookie])
+                    ctx.storage["session.setCookie"] = setCookie
+                    ctx.storage["session.id"] = signedCookies(Set([Cookie(name: cookie.name, value: cookie.value)]), secret: self.session.secret)[self.session.keyName]
                 } catch {
-                    err = error
+                    ctx.storage["session.error"] = error
                 }
             }
         }
 
-        let onFinish = {
-            if let e = err {
-                result {
-                    throw e
-                }
+        let onFinish: (QueueWorkContext) -> Void = { ctx in
+            if let error = ctx.storage["session.error"] as? Error {
+                result { throw error }
                 return
             }
             
-            if let cookie = setCookie {
+            if let cookie = ctx.storage["session.setCookie"] as? Set<AttributedCookie> {
+                req.session?.id = ctx.storage["session.id"] as? String
                 next.respond(to: req) { getResponse in
                     result {
                         var response = try getResponse()
-                        response.cookies = cookie // should merge
+                        response.cookies = cookie
                         return response
                     }
                 }
                 return
             }
 
-            guard let sessionId = (req.storage["signedCookies"] as? [String: String])?[self.session.keyName] , !sessionId.isEmpty else {
+            guard let sessionId = (ctx.storage["signedCookies"] as? [String: String])?[self.session.keyName] , !sessionId.isEmpty else {
                 next.respond(to: req, result: result)
                 return
             }
@@ -101,35 +97,36 @@ public struct SessionMiddleware: AsyncMiddleware {
                 next.respond(to: req, result: result)
             }
         }
-
+        
         Process.qwork(onThread: onThread, onFinish: onFinish)
     }
+}
 
-    private func shouldSetCookie(_ req: Request) -> Bool {
-        guard let cookieValue = req.cookies.filter({ $0.name.trim() == session.keyName }).map({ $0.value }).first else {
-            return true
-        }
 
-        do {
-            let dec = try signedCookie(cookieValue, secret: session.secret)
-            let sesId = try decode(cookieValue)
-            
-            return dec != sesId
-        } catch {
-            return true
-        }
+private func shouldSetCookie(_ req: Request, _ session: Session) -> Bool {
+    guard let cookieValue = req.cookies.filter({ $0.name.trim() == session.keyName }).map({ $0.value }).first else {
+        return true
     }
-
-    private func createCookieForSet() throws -> AttributedCookie {
-        let sessionId = try signSync(Session.generateId().hexadecimalString(), secret: session.secret)
+    
+    do {
+        let dec = try signedCookie(cookieValue, secret: session.secret)
+        let sesId = try decode(cookieValue)
         
-        var maxAge: AttributedCookie.Expiration?
-        if let ttl = session.ttl {
-            maxAge = .maxAge(ttl)
-        } else {
-            maxAge = nil
-        }
-        
-        return AttributedCookie(name: session.keyName, value: sessionId, expiration: maxAge , domain: session.domain, path: session.path, secure: session.secure, httpOnly: session.httpOnly)
+        return dec != sesId
+    } catch {
+        return true
     }
+}
+
+private func createCookieForSet(_ session: Session) throws -> AttributedCookie {
+    let sessionId = try signSync(Session.generateId().hexadecimalString(), secret: session.secret)
+    
+    var maxAge: AttributedCookie.Expiration?
+    if let ttl = session.ttl {
+        maxAge = .maxAge(ttl)
+    } else {
+        maxAge = nil
+    }
+    
+    return AttributedCookie(name: session.keyName, value: sessionId, expiration: maxAge , domain: session.domain, path: session.path, secure: session.secure, httpOnly: session.httpOnly)
 }
